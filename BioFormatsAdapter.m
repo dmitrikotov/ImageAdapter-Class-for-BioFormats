@@ -24,11 +24,16 @@ classdef BioFormatsAdapter < ImageAdapter
             obj.ImageSize = [imageLength, imageWidth, 1];
             obj.TileLength = tileLength;
             obj.TileWidth = tileWidth;
+        end
             
             % write BigDataViewer file
-            % add information to pass 
-            obj.ImageObject writeBigDataXML(filename_base,hypervolume,dimensionorder,varargin);
+            % add information to pass metadata like voxel size to the
+            % BigDataViewer file.
+            % obj.ImageObject writeBigDataXML(filename_base,hypervolume,dimensionorder,varargin);
         
+        function result = readRegion(obj, region_start, region_size)
+            %read a block of data
+            result = bfopen(obj.Filename
         end
     end
     
