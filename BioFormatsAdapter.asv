@@ -2,30 +2,31 @@ classdef BioFormatsAdapter < ImageAdapter
     properties (GetAccess = public, SetAccess = private)
         Filename;
         Series;
-        Metadata;
-        TileLength;
-        TileWidth;
+        stackSizeX;
+        stackSizeY;
+        stackSizeZ;
+        stackSizeT;
+        stackSizeC;
     end
     
     methods
-        function obj = BioFormatsReader(fname, imageLength, imageWidth, tileLength, tileWidth)
+        function obj = BioFormatsReader(fname, series)
           %constructor
           
-          reader = bfGetReader(rawDataPath);
-          nSeries = reader.getSeriesCount();
+          obj.Filename = fname;
+          obj.Series = series;
           
-          for i_series = 1:nSeries
-            reader.setSeries(i_series-1);
-            omeMeta = reader.getMetadataStore();
-            stackSizeX = omeMeta.getPixelsSizeX(i_series-1).getValue(); % image width, pixels
-            stackSizeY = omeMeta.getPixelsSizeY(i_series-1).getValue(); % image height, pixels
-            stackSizeZ = omeMeta.getPixelsSizeZ(i_series-1).getValue(); % number of Z slices
-            stackSizeT = omeMeta.getPixelsSizeT(i_series-1).getValue(); % number of timepoints
-            stackSizeC = omeMeta.getPixelsSizeC(i_series-1).getValue(); % number of channels
-            
-            if ~strcmp(char(omeMeta.getPixelsType(0)),'uint8')
-                error('Only works with 8bit')
-            end
+          reader = bfGetReader(fname);
+          reader.setSeries(series-1);
+          omeMeta = reader.getMetadataStore();
+          stackSizeX = omeMeta.getPixelsSizeX(series-1).getValue(); % image width, pixels
+          stackSizeY = omeMeta.getPixelsSizeY(series-1).getValue(); % image height, pixels
+          stackSizeZ = omeMeta.getPixelsSizeZ(series-1).getValue(); % number of Z slices
+          stackSizeT = omeMeta.getPixelsSizeT(series-1).getValue(); % number of timepoints
+          stackSizeC = omeMeta.getPixelsSizeC(series-1).getValue(); % number of channels
+          
+          if ~strcmp(char(omeMeta.getPixelsType(0)),'uint8')
+              error('Only works with 8bit')
           end
             
           validateattributes (fname,       {'char'},    {'row'});
@@ -38,11 +39,7 @@ classdef BioFormatsAdapter < ImageAdapter
                 error('BioFormatsAdapter:invalidTileSize',...
                     'Tile size must be a multiple of 16');
             end
-            
-            obj.Filename = fname;
-            obj.ImageSize = [imageLength, imageWidth, 1];
-            obj.TileLength = tileLength;
-            obj.TileWidth = tileWidth;
+           
         end
             
             % write BigDataViewer file
@@ -56,6 +53,10 @@ classdef BioFormatsAdapter < ImageAdapter
                 {[start(1), start(1) + count(1) - 1], ...
                 [start(2), start(2) + count(2) - 1]});
         end
+        
+        function [] = writeRegion(obj, region_start, region_data)
+        end
+        
         function result = close(obj) %#ok
         end
     end
