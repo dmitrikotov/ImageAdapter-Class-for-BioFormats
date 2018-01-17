@@ -8,10 +8,10 @@ classdef BioFormatsAdapter < ImageAdapter
     end
     
     methods
-        function obj = BioFormatsReader(fname)
+        function obj = BioFormatsReader(fname, imageLength, imageWidth, tileLength, tileWidth)
           %constructor
           
-          reader = bfGetReader(fname);
+          reader = bfGetReader(rawDataPath);
           nSeries = reader.getSeriesCount();
           
           for i_series = 1:nSeries
@@ -56,10 +56,6 @@ classdef BioFormatsAdapter < ImageAdapter
                 {[start(1), start(1) + count(1) - 1], ...
                 [start(2), start(2) + count(2) - 1]});
         end
-        
-        function [] = writeRegion(obj, region_start, region_data)
-        end
-        
         function result = close(obj) %#ok
         end
     end
