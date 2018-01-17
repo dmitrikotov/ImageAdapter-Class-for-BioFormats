@@ -2,11 +2,9 @@ classdef BioFormatsAdapter < ImageAdapter
     properties (GetAccess = public, SetAccess = private)
         Filename;
         Series;
-        StackSizeX;
-        StackSizeY;
-        StackSizeZ;
-        StackSizeT;
-        StackSizeC;
+        ImageProperties;
+        ImageSize;
+        VoxelSize;
     end
     
     methods
@@ -26,30 +24,37 @@ classdef BioFormatsAdapter < ImageAdapter
               error('Only works with 8bit')
           end
           
-          obj.Filename = fname;
-          obj.Series = series;          
-          obj.StackSizeX = stackSizeX;
-          obj.StackSizeY = stackSizeY;
-          obj.StackSizeZ = stackSizeZ;
-          obj.StackSizeT = stackSizeT;
-          obj.StackSizeC = stackSizeC;
+          voxelSizeXdefaultValue = omeMeta.getPixelsPhysicalSizeX(0).value();           % returns value in default unit
+          voxelSizeXdefaultUnit = omeMeta.getPixelsPhysicalSizeX(0).unit().getSymbol(); % returns the default unit type
+          voxelSizeX = omeMeta.getPixelsPhysicalSizeX(0).value(ome.units.UNITS.MICROMETER); % in µm
+          voxelSizeXdouble = voxelSizeX.doubleValue();                                  % The numeric value represented by this object after conversion to type double
+          voxelSizeY = omeMeta.getPixelsPhysicalSizeY(0).value(ome.units.UNITS.MICROMETER); % in µm
+          voxelSizeYdouble = voxelSizeY.doubleValue();                                  % The numeric value represented by this object after conversion to type double
+          voxelSizeZ = omeMeta.getPixelsPhysicalSizeZ(0).value(ome.units.UNITS.MICROMETER); % in µm
+          voxelSizeZdouble = voxelSizeZ.doubleValue();                                  % The numeric value represented by this object after conversion to type double
           
-        end
-            
-            % write BigDataViewer file
-            % add information to pass metadata like voxel size to the
-            % BigDataViewer file.
-            % obj.ImageObject writeBigDataXML(filename_base,hypervolume,dimensionorder,varargin);
-        
-            
-            % figure out how to specify Series for reading
-        function result = readRegion(obj, start, count)
-            result = bfopen(obj.Filename,obj.Page,obj.Info,
-                {[start(1), start(1) + count(1) - 1],
-                [start(2), start(2) + count(2) - 1]});
+          obj.Filename = fname;
+          obj.Series = series;
+          obj.ImageSize = [stackSizeX stackSizeY stackSizeZ stackSizeC stackSizeT] %XYZCT
+          obj.VoxelSize = [voxelSizeX voxelSizeY voxelSizeZ] 
+          obj.region_size = [256 256 16]
         end
         
-        function [] = writeRegion(obj, region_start, region_data)
+        function result = readRegion(obj,region_start)
+            result = bfopen(obj.Filename.Series,...
+                region_start(1):(region_start(1) + obj.region_size(1) - 1),...
+                region_start(2):(region_start(2) + obj.region_size(2) - 1));
+        end
+        
+        function [] = writeRegion(obj,dimensionorder,region_start,region_data)
+            [] = writeBigDataXML(obj.Filename,region_data,dimensionorder,...
+                'VoxelSize',obj.VoxelSize,region_start(1):(region_start(1) + obj.region_size(1) - 1),...
+                region_start(2):(region_start(2) + obj.region_size(2) - 1)),varargin);
+        end
+        
+        function [] = writeMergedRegion(obj, region_start, region_data)
+        % calculate the X Y Z size for a merged image and then generate an
+        % empty matrix of that size then fill the matrix block by block.
         end
         
         function result = close(obj) %#ok
