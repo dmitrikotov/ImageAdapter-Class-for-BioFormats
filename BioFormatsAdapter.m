@@ -2,7 +2,7 @@ classdef BioFormatsAdapter < ImageAdapter
     properties (GetAccess = public, SetAccess = private)
         Filename;
         Series;
-        ImageProperties;
+        ImageOutput;
         ImageSize;
         VoxelSize;
     end
@@ -38,6 +38,13 @@ classdef BioFormatsAdapter < ImageAdapter
           obj.ImageSize = [stackSizeX stackSizeY stackSizeZ stackSizeC stackSizeT] %XYZCT
           obj.VoxelSize = [voxelSizeX voxelSizeY voxelSizeZ] 
           obj.region_size = [256 256 16]
+          
+          % Create the BigDataViewer object.
+          obj.ImageOutput = writeBigDataXML(filename_base,hypervolume,dimensionorder,varargin);
+          
+          % Setup the BigDataViewer file properties.
+          
+          
         end
         
         function result = readRegion(obj,region_start)
