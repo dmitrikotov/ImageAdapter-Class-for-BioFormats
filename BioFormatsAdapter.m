@@ -8,11 +8,14 @@ classdef BioFormatsAdapter < ImageAdapter
         SizeX;
         SizeY;
         VoxelSize;
+        DimensionOrder;
+        Channel;
+        Vols;
        %ImageOutput;
     end
     
     methods
-        function obj = BioFormatsAdapter(fname,series)
+        function obj = BioFormatsAdapter(fname,series,dimensionorder,channel)
           %constructor
           
           reader = bfGetReader(fname);
@@ -33,6 +36,9 @@ classdef BioFormatsAdapter < ImageAdapter
           voxelSizeZ = omeMeta.getPixelsPhysicalSizeZ(0).value(ome.units.UNITS.MICROMETER); % in µm
           voxelSizeZdouble = voxelSizeZ.doubleValue();                                  % The numeric value represented by this object after conversion to type double
           
+          vols={};
+          vols = zeros(stackSizeX,stackSizeY,stackSizeZ,stackSizeC,'uint8');
+          
           obj.Filename = fname;
           obj.Series = series;
           obj.ZSlices = stackSizeZ
@@ -42,7 +48,9 @@ classdef BioFormatsAdapter < ImageAdapter
           obj.SizeY = stackSizeY
           obj.ImageSize = [stackSizeX stackSizeY stackSizeZ]
           obj.VoxelSize = [voxelSizeXdouble voxelSizeYdouble voxelSizeZdouble] 
-          
+          obj.DimensionOrder = dimensionorder
+          obj.Channel = channel
+          obj.Vols = vols
           % Create the BigDataViewer object.
           %obj.ImageOutput = writeBigDataXML(filename_base,hypervolume,dimensionorder,varargin);
           
@@ -54,29 +62,28 @@ classdef BioFormatsAdapter < ImageAdapter
         function vols = readRegion(obj,region_start,region_size)
             reader = bfGetReader(obj.Filename);
             reader.setSeries(obj.Series - 1);
-            vols = bfGetPlane(reader,1,region_start(1),region_start(2),...
-            region_size(1),region_size(2));
+            Vol = obj.Vols;
+            z = obj.ZSlices;
+            Channels = obj.Channels;
+            for iz = 0:z-1
+                iPlane = reader.getIndex(iz, obj.Channel, 0) + 1;
+                vols = bfGetPlane(reader,iPlane,region_start(1),region_start(2),...
+                    region_size(1),region_size(2));
+                vols(:,:,iz+1) = reshape(vols,region_size(1),region_size(2));
             end
+            vols(:,:,z,Channels) = 0;
+            Vol([region_start(1):region_size(1)],[region_start(2):region_size(2)],:,:) = vols;
+            obj.Vols = Vol
+        end
             
-            %vols = {};
-            %for it = 0:obj.Timepoints-1
-            %    vols{it+1} = zeros(obj.SizeX,obj.SizeY,obj.ZSlices,obj.Channels,'uint8');
-            %    for ic = 0:obj.Channels-1
-            %        for iz = 0:obj.ZSlices-1
-            %            iPlane = reader.getIndex(iz, ic, it) + 1;
-            %            plane = typecast(reader.openBytes(iPlane-1),'uint8');
-            %            vols{it+1}(:,:,iz+1,ic+1) = reshape(plane,obj.SizeX,obj.SizeY);
-            %        end
-            %    end
-            % end
-        %end
-            
-        %function [] = writeRegion(obj,dimensionorder,region_start,region_data)
-        %    [] = writeBigDataXML(obj.Filename,region_data,dimensionorder,...
+        %function [] = writeRegion(obj,region_start,region_data)
+        % [] = writeBigDataXML(obj.Filename,region_data,dimensionorder,...
         %        'VoxelSize',obj.VoxelSize,region_start(1):(region_start(1) + obj.region_size(1) - 1),...
         %        region_start(2):(region_start(2) + obj.region_size(2) - 1)),varargin);
         %end
-        
+        % writeBigDataXML(obj.Filename,vols,obj.DimensionOrder,obj.VoxelSize,varargin)
+        % original format: writeBigDataXML(filename_base,hypervolume,dimensionorder,varargin)
+        %
         %function [] = writeMergedRegion(obj, region_start, region_data)
         % calculate the X Y Z size for a merged image and then generate an
         % empty matrix of that size then fill the matrix block by block.
